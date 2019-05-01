@@ -16,7 +16,7 @@ function main() {
     http.createServer(function(req, res) {
         var urlInfo = parseUrl(root, req.url)
 
-        combineFiles(urlInfo.pathnames, function (err, data) {
+        validateFiles(urlInfo.pathnames, function (err, data) {
             if (err) {
                 res.writeHead(404)
                 res.end(err.message)
@@ -46,21 +46,36 @@ function parseUrl (root, url) {
     }
 }
 
-function combineFiles(pathnames, cb) {
-    var output = []
+function outputFiles() {
+    (function next(i, len) {
+        if (i < len) {
+            var reader = fs.createReadStream(pathnames[i]);
+
+            reader.pipe(writer, { end: false });
+            reader.on('end', function() {
+                next(i + 1, len);
+            });
+        } else {
+            writer.end();
+        }
+    }(0, pathnames.length));
+}
+
+function validateFiles(pathnames, cb) {
 
     (function next(i, len) {
         if (i<len) {
-            fs.readFile(pathnames[i], function(err, data) {
+            fs.stat(pathnames[i], function(err, stat) {
                 if (err) {
                     cb(err)
+                } else if(!stat.isFile()){
+                    cb(new Error())
                 } else {
-                    output.push(data)
-                    next(i+1, leg)
+                    next(i+1, len)
                 }
             })
         } else {
-            cb(null, Buffer.concat(output))
+            cb(null, pathnames)
         }
     }(0, pathnames.length))
 }
