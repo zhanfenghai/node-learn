@@ -11,9 +11,10 @@ var MIME = {
 
 function main() {
     var root = config.root || '.',
-        port = config.port || '6868';
+        port = config.port || '6868',
+        server;
 
-    http.createServer(function(req, res) {
+    server = http.createServer(function(req, res) {
         var urlInfo = parseUrl(root, req.url)
 
         validateFiles(urlInfo.pathnames, function (err, data) {
@@ -28,6 +29,12 @@ function main() {
             }
         })
     }).listen(port)
+
+    ProcessingInstruction.on('SIGTERM', function() {
+        server.close(function() {
+            ProcessingInstruction.exit(0)
+        })
+    })
 }
 
 function parseUrl (root, url) {
